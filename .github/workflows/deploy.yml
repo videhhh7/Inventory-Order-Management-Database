@@ -1,0 +1,33 @@
+name: Build and deploy inventory API
+on:
+  workflow_dispatch:
+permissions:
+  id-token: write
+  contents: read
+env:
+  AWS_REGION: ap-south-1
+  ECR_REPOSITORY: inventory-api-demo
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_DEPLOY_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
+      - uses: aws-actions/amazon-ecr-login@v2
+        id: login-ecr
+      - uses: docker/build-push-action@v6
+        with:
+          context: .
+          push: true
+          tags: ${{ steps.login-ecr.outputs.registry }}/${{ env.ECR_REPOSITORY }}:latest
+      - name: Terraform apply
+        working-directory: infra/terraform
+        env:
+          TF_VAR_image_uri: ${{ steps.login-ecr.outputs.registry }}/${{ env.ECR_REPOSITORY }}:latest
+          TF_VAR_db_password: ${{ secrets.INVENTORY_DB_PASSWORD }}
+        run: |
+          terraform init
+          terraform apply -auto-approve
