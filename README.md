@@ -1,28 +1,36 @@
-# Inventory & Order Management Database
+# Inventory & Order Management
 
-SQL Server portfolio project demonstrating relational database design and reporting for customers, products, inventory and orders.
+ASP.NET Core 8 API + SQL Server 2022 with transactional order creation and guarded stock decrement.
 
-## Features
-- Normalized tables with primary and foreign keys.
-- Constraints for data integrity.
-- Order header and order-line modelling.
-- Inventory tracking and low-stock reporting.
-- Reusable views, stored procedures and analytical queries.
-
-## Schema
-```text
-Customers 1 --- * Orders 1 --- * OrderItems * --- 1 Products
+## Start SQL Server locally
+Create an untracked `.env` file:
+```env
+MSSQL_SA_PASSWORD=Use-A-Strong-Local-Password-Here!
+```
+Then run:
+```bash
+docker compose up -d
+```
+Set the API connection string (PowerShell):
+```powershell
+$env:ConnectionStrings__Inventory="Server=localhost,1433;Database=InventoryOrderDemo;User Id=sa;Password=YOUR_PASSWORD;TrustServerCertificate=True"
+```
+Run `sql/schema.sql` and `sql/seed.sql` using SSMS or sqlcmd, then:
+```bash
+dotnet restore src/Inventory.Api/Inventory.Api.csproj
+dotnet run --project src/Inventory.Api/Inventory.Api.csproj
 ```
 
-## Run
-1. Open SQL Server Management Studio and connect to a local development SQL Server.
-2. Run `sql/schema.sql`.
-3. Run `sql/reports.sql`.
+## Endpoints
+- GET `/health`
+- GET `/api/products/low-stock`
+- POST `/api/customers`
+- POST `/api/products`
+- POST `/api/orders`
 
-The scripts create a dedicated `InventoryOrderDemo` database. Review scripts before running on shared infrastructure.
+Order creation uses a SQL transaction and fails atomically if stock is insufficient.
 
-## API starter
-A minimal ASP.NET Core 8 API is included under `src/Inventory.Api`. Configure the connection string using user secrets or environment variables; do not commit real credentials.
+## Cloud deployment
+Use Amazon RDS for SQL Server or Azure SQL Database and deploy the API to ECS/App Runner or Azure App Service. Keep the DB private, enable TLS, use a least-privilege application login, and store the connection string in the cloud secret manager. Run reviewed schema scripts as a controlled deployment step; do not use the SQL admin account in the app.
 
-## Possible extensions
-Add inventory transaction history, optimistic concurrency, automated database tests and query-plan-driven indexing.
+Never commit database passwords or production data.
